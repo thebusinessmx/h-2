@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#21150f">
+<meta name="description" content="Una experiencia para descubrir la historia del café.">
+<title>La historia del café</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --fondo:#21150f;--fondo2:#2c1b12;--crema:#f7efe4;--dorado:#d7a574;
+  --texto:#fff8ef;--muted:#d6c2af;--linea:rgba(247,239,228,.22);
+  --serif:Georgia,"Times New Roman",serif;
+}
+*{box-sizing:border-box}
+html{margin:0;background:var(--fondo);scroll-behavior:smooth;scroll-snap-type:y mandatory;overscroll-behavior-y:contain}
+body{margin:0;background:var(--fondo);color:var(--texto);font-family:var(--serif);-webkit-font-smoothing:antialiased}
+body.publico{overflow-x:hidden}
+button,input{font:inherit}
+button{cursor:pointer}
+.contenedor{width:100%;margin:0 auto}
+.pantalla{position:relative;min-height:100svh;width:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden}
+.inicio{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(12px,2.2vh,22px);padding:clamp(22px,5vw,48px) 20px calc(38px + env(safe-area-inset-bottom));text-align:center;background:radial-gradient(ellipse at 50% 35%,#543321 0%,var(--fondo) 70%)}
+.kicker{font:11px/1.4 Arial,sans-serif;letter-spacing:.34em;text-transform:uppercase;color:var(--dorado)}
+.inicio h1{font-size:clamp(38px,9vw,68px);font-weight:400;line-height:.98;letter-spacing:-.045em;margin:0;max-width:760px}
+.inicio h1 em{font-weight:400;color:var(--dorado)}
+.intro-texto{max-width:330px;margin:0;color:var(--muted);font-size:clamp(15px,3.8vw,18px);line-height:1.55}
+.portada-marco{width:min(78vw,330px);height:min(37svh,320px);display:flex;align-items:center;justify-content:center;overflow:visible;border:0;padding:0;background:transparent;box-shadow:none;position:relative}
+.portada-marco::after{content:"";position:absolute;inset:12% 8%;z-index:-1;border-radius:50%;background:rgba(215,165,116,.12);filter:blur(34px)}
+.portada-marco img{display:block;width:100%;height:100%;object-fit:contain;border:0;box-shadow:none}
+.play-btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:52px;padding:0 25px;border:1px solid rgba(215,165,116,.75);border-radius:999px;background:var(--crema);color:#382216;font:600 13px Arial,sans-serif;letter-spacing:.08em;transition:transform .25s ease,background .25s ease}
+.play-btn:active{transform:scale(.97)}
+.play-icon{width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:9px solid #8b5d3e;display:inline-block;flex:0 0 auto}
+.toca{font:10px Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#bda38e}
+.slide{display:flex;align-items:center;justify-content:center;padding:16px 12px calc(66px + env(safe-area-inset-bottom));background:linear-gradient(155deg,#2b1b12,#160f0b)}
+.slide::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(128,77,43,.17),transparent 68%);pointer-events:none}
+.imagen-marco{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.imagen-historia{display:block;width:100%;height:100%;max-width:100%;max-height:calc(100svh - 92px - env(safe-area-inset-bottom));object-fit:contain;object-position:center;filter:drop-shadow(0 14px 34px rgba(0,0,0,.22));transform:scale(.985);opacity:.88;transition:opacity .7s ease,transform .85s cubic-bezier(.2,.7,.2,1)}
+.slide.visible .imagen-historia{opacity:1;transform:scale(1)}
+.continuar{position:absolute;z-index:3;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:5px;color:rgba(255,248,239,.78);font:9px Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase;text-shadow:0 2px 8px #000}
+.flechas{font:20px/1 Arial,sans-serif;color:var(--dorado);animation:flotar 1.8s ease-in-out infinite}
+@keyframes flotar{0%,100%{transform:translateY(0);opacity:.7}50%{transform:translateY(4px);opacity:1}}
+.audio-control{position:fixed;z-index:20;top:calc(12px + env(safe-area-inset-top));right:12px;display:none;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:0 13px;border:1px solid rgba(247,239,228,.22);border-radius:999px;background:rgba(27,17,12,.78);color:var(--texto);backdrop-filter:blur(12px);font:11px Arial,sans-serif}
+.audio-control.activo{display:inline-flex}
+.audio-punto{width:6px;height:6px;border-radius:50%;background:var(--dorado);box-shadow:0 0 10px var(--dorado)}
+.final{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:50px 24px calc(42px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 20%,#50301f 0%,var(--fondo) 66%)}
+.final .ornamento{width:34px;height:1px;background:var(--dorado);margin-bottom:25px;position:relative}
+.final .ornamento::after{content:"";position:absolute;width:5px;height:5px;border:1px solid var(--dorado);border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--fondo)}
+.final h2{font-weight:400;font-size:clamp(35px,8vw,58px);line-height:1.02;letter-spacing:-.035em;margin:0 0 18px;max-width:600px}
+.final h2 em{color:var(--dorado);font-weight:400}
+.final p{max-width:360px;color:var(--muted);font-size:16px;line-height:1.65;margin:0 0 22px}
+.cta-redes{display:flex;flex-direction:column;align-items:center;gap:13px;margin:0 0 22px;color:var(--muted);font:11px Arial,sans-serif;letter-spacing:.13em;text-transform:uppercase}
+.flecha-redes{font:22px/1 Arial,sans-serif;color:var(--dorado);animation:flotar 1.8s ease-in-out infinite}
+.redes{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;max-width:460px;width:100%}
+.redes:empty{display:none}
+.sin-redes{display:none;color:#bda38e;font:12px/1.6 Arial,sans-serif;max-width:280px;margin-top:8px}
+.redes:empty + .sin-redes{display:block}
+.red{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 19px;border:1px solid rgba(215,165,116,.62);border-radius:999px;color:var(--texto);text-decoration:none;font:12px Arial,sans-serif;letter-spacing:.04em;transition:background .2s ease,color .2s ease}
+.red:hover,.red:focus-visible{background:var(--crema);color:#382216}
+.pie-final{margin-top:35px;color:#a88d77;font:9px Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase}
+.cargando{min-height:100svh;display:flex;align-items:center;justify-content:center;padding:30px;text-align:center;color:var(--muted);font-style:italic}
+#errorPublico{max-width:420px;line-height:1.6}
+#loginAdmin,#admin{display:none;min-height:100svh;background:#f8f4ef;color:#4b2e24;font-family:var(--serif)}
+#loginAdmin{padding:60px 24px;text-align:center}
+#loginAdmin h1,.admin h1{font-size:28px;font-weight:400;color:#8b4b38}
+#passwordAdmin{width:100%;max-width:320px;padding:14px;margin:20px auto 12px;display:block;border:1px solid #d3c7c1;border-radius:9px;font-size:16px;text-align:center}
+#btnLogin,.boton-admin{width:100%;max-width:420px;padding:14px;border:0;border-radius:30px;background:#8b4b38;color:white;font-size:16px}
+.admin{padding:30px 20px 60px;max-width:650px;margin:auto}
+.admin h1{text-align:center;margin:10px 0 8px}
+.admin-subtitulo{text-align:center;font-size:14px;color:#777;margin-bottom:30px}
+.campo{margin-bottom:18px}
+.campo label{display:block;margin-bottom:7px;font-size:15px}
+.campo input{width:100%;padding:14px;border:1px solid #d3c7c1;border-radius:9px;font-family:inherit;font-size:15px;outline:none}
+.campo input:focus{border-color:#9a624f}
+.boton-admin{max-width:none;cursor:pointer}
+.boton-secundario{width:100%;padding:13px;margin-top:10px;border:1px solid #9a624f;border-radius:30px;background:#fff;color:#8b4b38;font-family:inherit;font-size:15px}
+#resultadoAdmin{margin-top:25px;padding:20px;border-radius:12px;background:#faf7f5;text-align:center;display:none}
+.enlaceGenerado{display:block;margin:12px 0;color:#8b4b38;word-break:break-all;font-size:14px}
+.mensaje{margin-top:15px;text-align:center;font-size:14px}
+.exito{color:#557052}.error{color:#9b3d32}
+@media(min-width:760px){
+ .pantalla{padding-left:24px;padding-right:24px}
+ .portada-marco{width:min(30vw,340px);height:min(36svh,350px)}
+ .slide{padding-top:18px;padding-bottom:72px}
+ .imagen-historia{max-height:calc(100svh - 105px)}
+ .continuar{bottom:16px}
+}
+@media(prefers-reduced-motion:reduce){
+ html{scroll-behavior:auto}
+ *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body class="publico">
+<div class="contenedor">
+  <div id="cargando" class="cargando">Preparando tu experiencia…</div>
+  <main id="historia" style="display:none">
+    <section class="pantalla inicio" id="inicio" aria-label="Bienvenida">
+      <div class="kicker">Una experiencia para disfrutar</div>
+      <h1>La historia<br><em>del café</em></h1>
+      <p class="intro-texto">Cada taza guarda una historia. Te invitamos a descubrirla.</p>
+      <div class="portada-marco"><img src="C4DA13F8-8763-496B-9D5A-E0477E1975A7.png" alt="Portada de la historia del café"></div>
+      <button class="play-btn" id="botonPlay" type="button"><span class="play-icon" aria-hidden="true"></span><span>Dale Play</span></button>
+      <div class="toca">Toca para comenzar</div>
+    </section>
+
+    <section class="pantalla slide" aria-label="Historia del café, imagen 1"><div class="imagen-marco"><img class="imagen-historia" src="C4DA13F8-8763-496B-9D5A-E0477E1975A7.png" alt="Historia del café, primera imagen" fetchpriority="high"></div><div class="continuar"><span class="flechas">↓</span><span>Continúa bajando</span></div></section>
+    <section class="pantalla slide" aria-label="Historia del café, imagen 2"><div class="imagen-marco"><img class="imagen-historia" src="1F871C37-53A1-4F07-9521-0391454A9210.png" alt="Historia del café, segunda imagen" loading="lazy"></div><div class="continuar"><span class="flechas">↓</span><span>Continúa bajando</span></div></section>
+    <section class="pantalla slide" aria-label="Historia del café, imagen 3"><div class="imagen-marco"><img class="imagen-historia" src="F902A271-1DA8-4FF3-927F-0D1D3D9AD901.png" alt="Historia del café, tercera imagen" loading="lazy"></div><div class="continuar"><span class="flechas">↓</span><span>Continúa bajando</span></div></section>
+    <section class="pantalla slide" aria-label="Historia del café, imagen 4"><div class="imagen-marco"><img class="imagen-historia" src="3AFA15B5-2B88-4B61-9887-5351BED8F93E.png" alt="Historia del café, cuarta imagen" loading="lazy"></div><div class="continuar"><span class="flechas">↓</span><span>Continúa bajando</span></div></section>
+    <section class="pantalla slide" aria-label="Historia del café, imagen 5"><div class="imagen-marco"><img class="imagen-historia" src="CEA7B72F-328D-4822-8FF8-C70AEE86CB53.png" alt="Historia del café, quinta imagen" loading="lazy"></div><div class="continuar"><span class="flechas">↓</span><span>Continúa bajando</span></div></section>
+    <section class="pantalla slide" aria-label="Historia del café, imagen 6"><div class="imagen-marco"><img class="imagen-historia" src="8AB35F0D-65AE-49B2-A53F-00F379FF27AB.png" alt="Historia del café, sexta imagen" loading="lazy"></div><div class="continuar"><span class="flechas">↓</span><span>Conoce más</span></div></section>
+
+    <section class="pantalla final" aria-label="Redes sociales">
+      <div class="ornamento" aria-hidden="true"></div>
+      <div class="kicker">Gracias por llegar hasta aquí</div>
+      <h2>Que esta historia<br><em>siga contigo.</em></h2>
+      <p>Nos encantará seguir compartiendo buenos momentos contigo.</p>
+      <div class="cta-redes"><span>Síguenos en nuestras redes</span><span class="flecha-redes" aria-hidden="true">↓</span></div>
+      <div id="redes" class="redes" aria-label="Redes sociales"></div>
+      <div class="sin-redes">Los enlaces de redes sociales aparecerán aquí cuando estén configurados para esta cafetería.</div>
+      <div class="pie-final" id="nombreFinal">Una historia para disfrutar</div>
+    </section>
+  </main>
+</div>
+
+<button id="controlAudio" class="audio-control" type="button" aria-label="Silenciar música"><span class="audio-punto"></span><span id="textoAudio">Sonido activado</span></button>
+<audio id="audio" preload="none" loop><source src="Instrumental.mp3" type="audio/mpeg"></audio>
+
+<section id="loginAdmin">
+  <h1>Administración</h1><p>Ingresa tu contraseña para continuar.</p>
+  <input id="passwordAdmin" type="password" placeholder="Contraseña" autocomplete="current-password">
+  <button id="btnLogin" type="button">Entrar</button><div id="mensajeLogin" class="mensaje"></div>
+</section>
+
+<section id="admin" class="admin">
+  <h1>Crear cafetería</h1>
+  <div class="admin-subtitulo">Completa los datos y genera automáticamente el enlace individual.</div>
+  <div class="campo"><label for="nombreCafe">Nombre de la cafetería</label><input id="nombreCafe" type="text" placeholder="Ej. Café Aurora"></div>
+  <div class="campo"><label for="instagramCafe">Instagram</label><input id="instagramCafe" type="url" placeholder="https://www.instagram.com/..."></div>
+  <div class="campo"><label for="facebookCafe">Facebook</label><input id="facebookCafe" type="url" placeholder="https://www.facebook.com/..."></div>
+  <div class="campo"><label for="tiktokCafe">TikTok</label><input id="tiktokCafe" type="url" placeholder="https://www.tiktok.com/@..."></div>
+  <button id="btnGuardar" class="boton-admin" type="button">Guardar cafetería</button>
+  <div id="mensajeAdmin" class="mensaje"></div>
+  <div id="resultadoAdmin"><strong>¡Cafetería creada!</strong><div>Este es su enlace:</div><a id="enlaceGenerado" class="enlaceGenerado" target="_blank" rel="noopener noreferrer"></a><button id="btnCopiar" class="boton-secundario" type="button">Copiar enlace</button><button id="btnNueva" class="boton-secundario" type="button">Crear otra cafetería</button></div>
+</section>
+
+<script>
+"use strict";
+const SUPABASE_URL = "https://lnnprkswoghsylljfqom.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_VU_VnvL0_chSbvIsA-Unsg_2jn9XHMq";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+const cargando = document.getElementById("cargando");
+const historia = document.getElementById("historia");
+const redes = document.getElementById("redes");
+const audio = document.getElementById("audio");
+const controlAudio = document.getElementById("controlAudio");
+const textoAudio = document.getElementById("textoAudio");
+const botonPlay = document.getElementById("botonPlay");
+
+function mostrarError(mensaje){
+  cargando.innerHTML = "";
+  const texto = document.createElement("div");
+  texto.id = "errorPublico";
+  texto.textContent = mensaje;
+  cargando.appendChild(texto);
+}
+function actualizarControlAudio(){
+  const silenciado = audio.muted || audio.paused;
+  textoAudio.textContent = silenciado ? "Activar sonido" : "Sonido activado";
+  controlAudio.setAttribute("aria-label", silenciado ? "Activar música" : "Silenciar música");
+}
+function agregarRed(nombre,url){
+  if(!url || !url.trim()) return;
+  let segura;
+  try { segura = new URL(url.trim()); } catch { return; }
+  if(!["http:","https:"].includes(segura.protocol)) return;
+  const enlace = document.createElement("a");
+  enlace.className = "red";
+  enlace.href = segura.href;
+  enlace.target = "_blank";
+  enlace.rel = "noopener noreferrer";
+  enlace.textContent = nombre;
+  redes.appendChild(enlace);
+}
+botonPlay.addEventListener("click", async () => {
+  try {
+    audio.muted = false;
+    await audio.play();
+  } catch (error) {
+    console.warn("No se pudo iniciar el audio:", error);
+  }
+  controlAudio.classList.add("activo");
+  actualizarControlAudio();
+  const primeraImagen = historia.querySelector(".slide");
+  primeraImagen.scrollIntoView({behavior:"smooth",block:"start"});
+});
+controlAudio.addEventListener("click", async () => {
+  if(audio.paused){
+    try { audio.muted = false; await audio.play(); } catch(error){ console.warn(error); }
+  } else {
+    audio.muted = !audio.muted;
+  }
+  actualizarControlAudio();
+});
+audio.addEventListener("play", actualizarControlAudio);
+audio.addEventListener("pause", actualizarControlAudio);
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting && entry.intersectionRatio >= 0.55) entry.target.classList.add("visible");
+  });
+},{threshold:[0.2,0.55,0.8]});
+document.querySelectorAll(".slide").forEach(slide => observer.observe(slide));
+
+async function cargarCafeteria(){
+  const parametros = new URLSearchParams(window.location.search);
+  const id = parametros.get("id");
+  if(!id){
+    cargando.style.display = "none";
+    historia.style.display = "block";
+    document.body.classList.add("publico");
+    return;
+  }
+  const {data,error} = await supabaseClient.from("Cafeterías").select("nombre, instagram, facebook, tiktok").eq("id",id).single();
+  if(error || !data){
+    console.error("Error cargando cafetería:",error);
+    mostrarError("No se pudo cargar la información de esta cafetería. Verifica el enlace e inténtalo de nuevo.");
+    return;
+  }
+  document.title = data.nombre ? `La historia de ${data.nombre}` : "La historia del café";
+  document.getElementById("nombreFinal").textContent = data.nombre || "Una historia para disfrutar";
+  agregarRed("Instagram",data.instagram);
+  agregarRed("Facebook",data.facebook);
+  agregarRed("TikTok",data.tiktok);
+  cargando.style.display = "none";
+  historia.style.display = "block";
+}
+function iniciarAdmin(){
+  document.body.classList.remove("publico");
+  cargando.style.display = "none";
+  historia.style.display = "none";
+  controlAudio.style.display = "none";
+  document.getElementById("loginAdmin").style.display = "block";
+}
+document.getElementById("btnLogin").addEventListener("click",function(){
+  const password = document.getElementById("passwordAdmin").value;
+  const mensaje = document.getElementById("mensajeLogin");
+  if(password === "2099"){
+    document.getElementById("loginAdmin").style.display = "none";
+    document.getElementById("admin").style.display = "block";
+    mensaje.textContent = "";
+  }else{
+    mensaje.textContent = "Contraseña incorrecta.";
+    mensaje.className = "mensaje error";
+  }
+});
+document.getElementById("passwordAdmin").addEventListener("keydown",e=>{if(e.key==="Enter")document.getElementById("btnLogin").click();});
+
+document.getElementById("btnGuardar").addEventListener("click",async function(){
+  const nombre = document.getElementById("nombreCafe").value.trim();
+  const instagram = document.getElementById("instagramCafe").value.trim();
+  const facebook = document.getElementById("facebookCafe").value.trim();
+  const tiktok = document.getElementById("tiktokCafe").value.trim();
+  const mensaje = document.getElementById("mensajeAdmin");
+  const boton = document.getElementById("btnGuardar");
+  if(!nombre){
+    mensaje.textContent = "Escribe el nombre de la cafetería.";
+    mensaje.className = "mensaje error";
+    return;
+  }
+  for(const [campo,valor] of [["Instagram",instagram],["Facebook",facebook],["TikTok",tiktok]]){
+    if(valor && !/^https?:\/\//i.test(valor)){
+      mensaje.textContent = `El enlace de ${campo} debe comenzar con https://`;
+      mensaje.className = "mensaje error";
+      return;
+    }
+  }
+  boton.disabled = true;
+  boton.textContent = "Guardando…";
+  const {data,error} = await supabaseClient.from("Cafeterías").insert([{nombre,instagram:instagram||null,facebook:facebook||null,tiktok:tiktok||null}]).select("id").single();
+  if(error){
+    console.error(error);
+    mensaje.textContent = "No se pudo guardar. Revisa los permisos de Supabase.";
+    mensaje.className = "mensaje error";
+    boton.disabled = false;
+    boton.textContent = "Guardar cafetería";
+    return;
+  }
+  const url = new URL(window.location.pathname,window.location.origin);
+  url.searchParams.set("id",data.id);
+  const enlace = url.href;
+  const enlaceGenerado = document.getElementById("enlaceGenerado");
+  enlaceGenerado.href = enlace;
+  enlaceGenerado.textContent = enlace;
+  document.getElementById("resultadoAdmin").style.display = "block";
+  mensaje.textContent = "Cafetería guardada correctamente.";
+  mensaje.className = "mensaje exito";
+  boton.disabled = false;
+  boton.textContent = "Guardar cafetería";
+});
+document.getElementById("btnCopiar").addEventListener("click",async function(){
+  const enlace = document.getElementById("enlaceGenerado").href;
+  try{
+    await navigator.clipboard.writeText(enlace);
+    this.textContent = "✓ Enlace copiado";
+    setTimeout(()=>{this.textContent="Copiar enlace";},1800);
+  }catch{
+    window.prompt("Copia el enlace de la cafetería:",enlace);
+  }
+});
+document.getElementById("btnNueva").addEventListener("click",function(){
+  ["nombreCafe","instagramCafe","facebookCafe","tiktokCafe"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("resultadoAdmin").style.display = "none";
+  document.getElementById("mensajeAdmin").textContent = "";
+  window.scrollTo({top:0,behavior:"smooth"});
+});
+const parametros = new URLSearchParams(window.location.search);
+if(parametros.get("admin")==="1") iniciarAdmin();
+else cargarCafeteria();
+</script>
+</body>
+</html>
